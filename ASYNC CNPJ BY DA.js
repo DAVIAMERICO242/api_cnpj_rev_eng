@@ -3,6 +3,23 @@ const XLSX = require('xlsx');
 const cheerio = require('cheerio');
 const cell_number_XPATH = '#__nuxt > div > div:nth-child(2) > section:nth-child(1) > div > div > div:nth-child(4) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > p:nth-child(2) > a';
 
+function remove_array_object_duplicates(array_obj,key="CNPJ"){//[obj1,obj2,...]
+    var empiric = [];
+    var new_array_obj = array_obj.map((e)=>{
+        if(e.hasOwnProperty(key)){
+            if(!(empiric.includes(e[key]))){
+                empiric.push(e[key]);//nao passa por esse valor de cnpj novamente
+                return e;
+            }else{
+                return null;
+            }
+        }else{
+            return null;
+        }
+    }).filter((e1)=>e1);
+    return new_array_obj;
+}
+
 async function array_json_to_excel(future_excel,prefix){
     const ws = XLSX.utils.json_to_sheet(future_excel);
 
@@ -111,19 +128,26 @@ function get_cnpj_telefone(cnpj,current_cnpj_data){
 
 function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
         return new Promise(async (resolve_all_loop,reject_all_loop)=>{
+            const cnpj_data_promises = [];//nao precisa
+            const tel_promises = [];//nao precisa
+            const last_promises = [];//util p krl
             var future_excel = [];
             var current_page_data = undefined;
             var current_telefone = undefined;
             for(let i=0;i<=n_pages;i++){
                 await sleep(500);
                 try{
-                    get_cnpj_data(i,uf,cidade, bairros).then((current_page_data)=>{
-                        console.log('deu')
+                    var get_cnpj_data_promise = get_cnpj_data(i,uf,cidade, bairros);
+                    cnpj_data_promises.push(get_cnpj_data_promise);
+                    get_cnpj_data_promise.then((current_page_data)=>{
+                        // console.log('deu')
                         if(current_page_data?.length){
                             for(let j=0;j<=current_page_data.length;j++){
                                 var current_cnpj_data = current_page_data[j];
                                 if(current_cnpj_data?.cnpj){
-                                    get_cnpj_telefone(current_cnpj_data['cnpj'], current_cnpj_data).then(({current_telefone, current_cnpj_data})=>{
+                                    var get_cnpj_telefone_promise = get_cnpj_telefone(current_cnpj_data['cnpj'], current_cnpj_data);
+                                    tel_promises.push(get_cnpj_telefone_promise)
+                                    var last_promise = get_cnpj_telefone_promise.then(({current_telefone, current_cnpj_data})=>{
                                         future_excel.push({
                                             "TELEFONE":current_telefone || 'nao encontrado',
                                             "CNPJ":current_cnpj_data['cnpj'],
@@ -131,17 +155,11 @@ function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
                                             "ESTADO": current_cnpj_data['uf'] || 'nao encontrado',
                                             "MUNICIPIO": current_cnpj_data['municipio'] || 'nao encontrado',
                                             "BAIRRO": current_cnpj_data['bairro']
-                                        });
-                                        console.log(future_excel.length)
-                                        if(i===n_pages){
-                                            resolve_all_loop(future_excel);
-                                        }
-                                    }).catch((error)=>{
-                                        console.log(error);
-                                        if(i===n_pages){
-                                            resolve_all_loop(future_excel);
-                                        }
-                                    });
+                                        })
+                                        return future_excel;
+                                        // console.log(future_excel.length)
+                                    }).catch(()=>null);
+                                    last_promises.push(last_promise);
                                 }
                             }
                         }
@@ -151,6 +169,39 @@ function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
                     console.log('instabilidade na requisição');
                 }
             }
+
+            last_promises[last_promises.length-1].then((future_excel)=>{
+                resolve_all_loop(future_excel);
+            }).catch(()=>reject_all_loop(null))
+
+            // var reverted_promises = last_promises.reverse();
+
+            // console.log('reverted promises');
+            // console.log(reverted_promises);
+            // console.log('reverted promises 0');
+            // console.log(reverted_promises[0]);
+
+            // var was_solved = 0;
+
+            // var isResolved = false; // Variável de controle para indicar se uma promessa foi resolvida
+
+            // for (var k = 0; k < reverted_promises.length; k++) {
+            //     if (isResolved) break; // Se uma promessa já foi resolvida, saia do loop
+            //     reverted_promises[k].then((future_excel) => {
+            //         console.log('PROMISE NO LOOP');
+            //         console.log(reverted_promises[k]);
+            //         if (future_excel) {
+            //             console.log(resolveu);
+            //             resolve_all_loop(future_excel);
+            //             isResolved = true; // Define a variável de controle para true para indicar que uma promessa foi resolvida
+            //         }
+            //     }).catch(() => {});
+            // }
+            
+            
+            // if(!was_solved){
+            //     reject_all_loop([]);
+            // }
         })
     
     // console.log('FINAL');
@@ -159,13 +210,25 @@ function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
 
 
 async function f(){
-    uf = 'CE';
-    cidade = 'FORTALEZA';
-    bairros = ['joquei'];
-    const out = await get_cnpj_with_numbers(50,uf,cidade, bairros);
-    console.log('TAMANHO FINAL');
-    console.log(out.length);
-    array_json_to_excel(out,uf+'_'+cidade);//prefixo
+    const uf = 'CE';
+    const cidade = 'FORTALEZA';
+    const bairros = ['bom sucesso','joquei','parangaba','montese','conjunto ceara','agua fria','edson queiroz','benfica','bairro de fatima','aldeota','praia de iracema','agua fria','caucaia','messejana','presidente kennedy','barra do ceara','jardim guanabara','caucaia','jeninbau','metropole'];
+    for(var i=0;i<bairros.length;i++){
+        
+            console.log('PROGRESSO');
+            console.log(i);
+            var out = await get_cnpj_with_numbers(50,uf,cidade, [bairros[i]]);
+            console.log('PASSOU POR OUT');
+            console.log(out);
+            var clean = remove_array_object_duplicates(out,key="CNPJ");
+            console.log('CLEAN');
+            console.log(clean);
+            if(clean?.length){
+                console.log('EXCEL TESTE');
+                array_json_to_excel(clean,bairros[i].toUpperCase()+'_'+cidade);//prefixo
+            }
+        
+    }
 }
 f()
 
