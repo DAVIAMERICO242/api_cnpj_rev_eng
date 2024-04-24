@@ -170,9 +170,13 @@ function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
                 }
             }
 
-            last_promises[last_promises.length-1].then((future_excel)=>{
-                resolve_all_loop(future_excel);
-            }).catch(()=>reject_all_loop(null))
+            if(last_promises[last_promises.length-1] instanceof Promise){
+                last_promises[last_promises.length-1].then((future_excel)=>{
+                    resolve_all_loop(future_excel);
+                }).catch(()=>reject_all_loop(null))
+            }else{
+                reject_all_loop(null)
+            }
 
             // var reverted_promises = last_promises.reverse();
 
@@ -214,7 +218,7 @@ async function f(){
     const cidade = 'FORTALEZA';
     const bairros = ['bom sucesso','joquei','parangaba','montese','conjunto ceara','agua fria','edson queiroz','benfica','bairro de fatima','aldeota','praia de iracema','agua fria','caucaia','messejana','presidente kennedy','barra do ceara','jardim guanabara','caucaia','jeninbau','metropole'];
     for(var i=0;i<bairros.length;i++){
-        
+        try{
             console.log('PROGRESSO');
             console.log(i);
             var out = await get_cnpj_with_numbers(50,uf,cidade, [bairros[i]]);
@@ -227,7 +231,10 @@ async function f(){
                 console.log('EXCEL TESTE');
                 array_json_to_excel(clean,bairros[i].toUpperCase()+'_'+cidade);//prefixo
             }
-        
+        }catch(error){
+            console.log('erro');
+        }
+          
     }
 }
 f()
