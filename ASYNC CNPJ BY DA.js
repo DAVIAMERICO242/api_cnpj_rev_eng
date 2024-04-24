@@ -216,12 +216,32 @@ function get_cnpj_with_numbers(n_pages,uf,cidade, bairros){
 async function f(){
     const uf = 'CE';
     const cidade = 'FORTALEZA';
-    const bairros = ['bom sucesso','joquei','parangaba','montese','conjunto ceara','agua fria','edson queiroz','benfica','bairro de fatima','aldeota','praia de iracema','agua fria','caucaia','messejana','presidente kennedy','barra do ceara','jardim guanabara','caucaia','jeninbau','metropole'];
-    for(var i=0;i<bairros.length;i++){
+    const bairros = ['aldeota'];
+    if(bairros.length){
+        for(var i=0;i<bairros.length;i++){
+            try{
+                console.log('PROGRESSO');
+                console.log(i);
+                var out = await get_cnpj_with_numbers(50,uf,cidade, [bairros[i]]);
+                console.log('PASSOU POR OUT');
+                console.log(out);
+                var clean = remove_array_object_duplicates(out,key="CNPJ");
+                console.log('CLEAN');
+                console.log(clean);
+                if(clean?.length){
+                    console.log('EXCEL TESTE');
+                    array_json_to_excel(clean,bairros[i].toUpperCase()+'_'+cidade);//prefixo
+                }
+            }catch(error){
+                console.log('erro');
+            }
+              
+        }
+    }else{
         try{
             console.log('PROGRESSO');
-            console.log(i);
-            var out = await get_cnpj_with_numbers(50,uf,cidade, [bairros[i]]);
+            console.log(0);
+            var out = await get_cnpj_with_numbers(50,uf,cidade, []);
             console.log('PASSOU POR OUT');
             console.log(out);
             var clean = remove_array_object_duplicates(out,key="CNPJ");
@@ -229,12 +249,11 @@ async function f(){
             console.log(clean);
             if(clean?.length){
                 console.log('EXCEL TESTE');
-                array_json_to_excel(clean,bairros[i].toUpperCase()+'_'+cidade);//prefixo
+                array_json_to_excel(clean,cidade);//prefixo
             }
         }catch(error){
             console.log('erro');
         }
-          
     }
 }
 f()
