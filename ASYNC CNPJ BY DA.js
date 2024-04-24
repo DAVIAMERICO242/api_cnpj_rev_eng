@@ -3,6 +3,32 @@ const XLSX = require('xlsx');
 const cheerio = require('cheerio');
 const cell_number_XPATH = '#__nuxt > div > div:nth-child(2) > section:nth-child(1) > div > div > div:nth-child(4) > div:nth-child(1) > div:nth-child(3) > div:nth-child(1) > p:nth-child(2) > a';
 
+
+const userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:96.0) Gecko/20100101 Firefox/96.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:95.0) Gecko/20100101 Firefox/95.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:94.0) Gecko/20100101 Firefox/94.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.81 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0'
+];
+
+function getRandomUserAgent() {
+    return userAgents[Math.floor(Math.random() * userAgents.length)];
+}
+
+
 function remove_array_object_duplicates(array_obj,key="CNPJ"){//[obj1,obj2,...]
     var empiric = [];
     var new_array_obj = array_obj.map((e)=>{
@@ -43,6 +69,7 @@ function sleep(ms){
 
 function get_cnpj_data(page,uf,cidade, bairros = []){
     return new Promise((resolve,reject)=>{
+        
         fetch('https://api.casadosdados.com.br/v2/public/cnpj/search', {//dados pagina 3
             method: 'POST',
             headers: {
@@ -95,6 +122,7 @@ function get_cnpj_data(page,uf,cidade, bairros = []){
             resolve(page_data.data?.cnpj);
         })
         .catch(error => {
+            console.log(error)
             reject(null);
         });
     })
@@ -105,7 +133,10 @@ function get_cnpj_telefone(cnpj,current_cnpj_data){
     return new Promise((resolve,reject)=>{
         a = '54258001000160';
         fetch(`https://casadosdados.com.br/solucao/cnpj/${cnpj}`,{
-            method:"GET"
+            method:"GET",
+            headers: {
+                'Content-Type': 'application/json'
+            }
         })
         .then(response => {
                 return response.text(); // Reading response as text
@@ -120,7 +151,8 @@ function get_cnpj_telefone(cnpj,current_cnpj_data){
             );
             // Faça algo com os dados recebidos
         }).catch(error => {
-            console.log('vazado');
+            console.log(error);
+            console.log('foi cnpj particular erro')
             reject(null);
         });
     })
